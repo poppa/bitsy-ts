@@ -359,6 +359,11 @@ module.exports = {
     // ----------------------------
     '@typescript-eslint/class-literal-property-style': ['error'],
 
+    // -----------------------------
+    // explicit-function-return-type
+    // -----------------------------
+    '@typescript-eslint/explicit-function-return-type': ['error'],
+
     // Requires parserOptions.project
     '@typescript-eslint/switch-exhaustiveness-check': ['error'],
     '@typescript-eslint/return-await': 'error',

@@ -8,7 +8,10 @@
   "license": "MIT",
   "scripts": {
     "compile": "ts-node src/mod.ts",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "build": "tsc",
+    "dev": "tsc -w",
+    "test": "jest"
   },
   "dependencies": {
     "@types/jest": "^26.0.14",
