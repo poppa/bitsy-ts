@@ -33,6 +33,7 @@ export class Tokenizer {
   }
 
   public tokenize(): this {
+    const boundWs = this.matchWhitespace.bind(this)
     const boundComment = this.matchComment.bind(this)
     const boundIdent = this.identifierMatcher.bind(this)
     const boundOp = this.operatorMatcher.bind(this)
@@ -40,7 +41,7 @@ export class Tokenizer {
     while (!this.done) {
       const curr = this.#cursor
 
-      this.takeWs()
+      this.pushToken(this.take(boundWs))
         .pushToken(this.take(boundComment))
         .pushToken(this.take(boundIdent))
         .pushToken(this.take(boundOp))
@@ -83,11 +84,6 @@ export class Tokenizer {
   private take(matcher: MatcherFn): Token | undefined {
     const x = matcher()
     return x
-  }
-
-  private takeWs(): this {
-    this.pushToken(this.take(this.matchWhitespace.bind(this)))
-    return this
   }
 
   private pushToken(token: Maybe<Token>, assert?: string): this {
