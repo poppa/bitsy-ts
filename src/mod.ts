@@ -1,6 +1,6 @@
 import { install } from 'source-map-support'
 install()
-// import { readFileSync } from 'fs'
+import { readFileSync } from 'fs'
 import { validIdentiferChars } from './lib/charcode'
 import { Tokenizer } from './lib/tokenizer'
 
@@ -26,15 +26,7 @@ A B C D E F G H I J K L M N O P Q R S T U V X Y Z \
       .sort((a, b) => a - b)
   )
 } else if (process.env.TEST_TOKENIZER) {
-  // const data = `
-  //   BEGIN
-  //     LOOP {comment}
-  //       key = 1
-  //     END
-  //   END`
-  const data = `
-   BEGIN{c}END`
-  //readFileSync('samples/fibonacci.bitsy').toString('utf8')
+  const data = readFileSync('samples/fibonacci.bitsy').toString('utf8')
   const tokenizer = new Tokenizer(data).tokenize()
 
   console.log(`Tokens:`, tokenizer.tokens)

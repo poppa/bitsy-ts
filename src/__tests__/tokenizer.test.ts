@@ -49,7 +49,5 @@ describe('Tokenizer test suite', () => {
     // Newline after BEGIN
     expect(t[2].line).toEqual(2)
     expect(t[2].column).toEqual(12)
-
-    expect(tz.position).toEqual(tz.length)
   })
 })

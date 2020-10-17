@@ -1,5 +1,6 @@
 import type { Maybe } from './types'
-import { Token } from './token'
+import type { Token } from './token'
+import { makeToken } from './token'
 import * as CharCode from './charcode'
 
 type MatcherFn = () => Token | undefined
@@ -23,79 +24,26 @@ export class Tokenizer {
     this.#len = input.length
   }
 
-  public get position(): number {
-    return this.#cursor
-  }
-
   public get length(): number {
     return this.#len
-  }
-
-  public get current(): number {
-    const c = this.#input.charCodeAt(this.#cursor)
-    return c
-  }
-
-  public get currentChar(): string {
-    return this.#input.charAt(this.#cursor)
-  }
-
-  public get next(): number {
-    return this.#input.charCodeAt(this.#cursor + 1)
-  }
-
-  public get prev(): number {
-    return this.#input.charCodeAt(this.#cursor - 1)
-  }
-
-  public get done(): boolean {
-    return isNaN(this.next)
   }
 
   public get tokens(): Token[] {
     return this.#tokens
   }
 
-  public takeAndMoveNext(moveColumn = true): number {
-    const c = this.current
-    this.#cursor += 1
-
-    if (moveColumn) {
-      this.#col += 1
-    }
-
-    return c
-  }
-
-  public takeAndMoveNextChar(moveColumn = true): string {
-    const c = this.currentChar
-    this.#cursor += 1
-
-    if (moveColumn) {
-      this.#col += 1
-    }
-
-    return c
-  }
-
-  public take(matcher: MatcherFn): Token | undefined {
-    const x = matcher()
-    return x
-  }
-
-  public isValid(c: number): boolean {
-    return CharCode.isValid(c)
-  }
-
   public tokenize(): this {
+    const boundComment = this.matchComment.bind(this)
+    const boundIdent = this.identifierMatcher.bind(this)
+    const boundOp = this.operatorMatcher.bind(this)
+
     while (!this.done) {
       const curr = this.#cursor
-      // console.log(`-> cursor: %O, %O (%O)`, curr, this.currentChar, this.#col)
 
       this.takeWs()
-        .pushToken(this.take(this.matchComment.bind(this)))
-        .pushToken(this.take(this.identifierMatcher.bind(this)))
-        .pushToken(this.take(this.operatorMatcher.bind(this)))
+        .pushToken(this.take(boundComment))
+        .pushToken(this.take(boundIdent))
+        .pushToken(this.take(boundOp))
 
       if (curr === this.#cursor) {
         throw new Error(
@@ -105,6 +53,36 @@ export class Tokenizer {
     }
 
     return this
+  }
+
+  private get current(): number {
+    const c = this.#input.charCodeAt(this.#cursor)
+    return c
+  }
+
+  private get currentChar(): string {
+    return this.#input.charAt(this.#cursor)
+  }
+
+  private get next(): number {
+    return this.#input.charCodeAt(this.#cursor + 1)
+  }
+
+  private get done(): boolean {
+    return isNaN(this.next)
+  }
+
+  private takeAndMoveNextChar(): string {
+    const c = this.currentChar
+    this.#cursor += 1
+    this.#col += 1
+
+    return c
+  }
+
+  private take(matcher: MatcherFn): Token | undefined {
+    const x = matcher()
+    return x
   }
 
   private takeWs(): this {
@@ -122,9 +100,9 @@ export class Tokenizer {
     return this
   }
 
-  private addLine(n?: number): this {
+  private addLine(n?: number, col = 1): this {
     this.#line += n ?? 1
-    this.#col = 1
+    this.#col = col
 
     return this
   }
@@ -149,14 +127,14 @@ export class Tokenizer {
 
     while (valid.includes(this.current)) {
       if (this.current === CharCode.Char.Newline) {
-        this.addLine()
+        this.addLine(1, 0)
       }
 
       buf.push(this.takeAndMoveNextChar())
     }
 
     if (buf.length) {
-      return new Token({
+      return makeToken({
         column: startCol,
         line: startLine,
         position: this.#cursor,
@@ -193,7 +171,7 @@ export class Tokenizer {
 
       this.moveCursor(str.length)
 
-      return new Token({
+      return makeToken({
         column: colStart,
         position: posStart,
         line: lineStart,
@@ -215,14 +193,14 @@ export class Tokenizer {
   private makeSimpleMatcher(valid: number[]): MatcherFn {
     return (): Maybe<Token> => {
       const acc: string[] = []
-      const startCol = this.#col - 1
+      const startCol = this.#col
 
       while (valid.includes(this.current)) {
         acc.push(this.takeAndMoveNextChar())
       }
 
       if (acc.length) {
-        return new Token({
+        return makeToken({
           value: acc.join(''),
           column: startCol,
           line: this.#line,
