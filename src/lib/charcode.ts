@@ -89,7 +89,7 @@ export function isValid(char: number): boolean {
   return validCodes.includes(char)
 }
 
-export function validIdentiferChars(): number[] {
+export function validSymbolChars(): number[] {
   const chars: number[] = []
 
   for (let i = Char.Zero; i < Char.Nine; i++) {

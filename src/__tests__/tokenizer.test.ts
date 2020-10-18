@@ -1,28 +1,41 @@
 import 'jest'
+import type { Token } from '../lib/token'
 import { Tokenizer } from '../lib/tokenizer'
+
+function readAllTokens(t: Tokenizer): Token[] {
+  const tokens: Token[] = []
+
+  for (const token of t.tokenize()) {
+    tokens.push(token)
+  }
+
+  return tokens
+}
 
 describe('Tokenizer test suite', () => {
   test('Expect simple tokenizing to work', () => {
-    const tz = new Tokenizer(`BEGIN END`).tokenize()
-    const t = tz.tokens
+    const tz = new Tokenizer(`BEGIN END`)
+    const t = readAllTokens(tz)
 
-    expect(t.length).toEqual(3)
+    expect(t.length).toEqual(2)
     expect(t[0].value).toEqual('BEGIN')
-    expect(t[1].value).toEqual(' ')
-    expect(t[2].value).toEqual('END')
+    expect(t[1].value).toEqual('END')
   })
 
   test('Expect comments to be handled', () => {
-    const tz = new Tokenizer(`{this is a comment}`).tokenize()
-    expect(tz.tokens[0].value).toEqual('{this is a comment}')
+    const tz = new Tokenizer(`{this is a comment}`)
+    const t = readAllTokens(tz)
+    expect(t[0].value).toEqual('{this is a comment}')
   })
 
   test('Expect multiline comments to be handled', () => {
     const tz = new Tokenizer(`{
       this is a comment
-      over multiple lines}`).tokenize()
+      over multiple lines}`)
 
-    expect(tz.tokens[0].value).toEqual(`{
+    const t = readAllTokens(tz)[0]
+
+    expect(t.value).toEqual(`{
       this is a comment
       over multiple lines}`)
   })
@@ -34,20 +47,16 @@ describe('Tokenizer test suite', () => {
           key = 1
         END
       END
-    `).tokenize()
+    `)
 
-    const t = tz.tokens
-
-    // Beginning newline and space
-    expect(t[0].line).toEqual(1)
-    expect(t[0].column).toEqual(1)
+    const t = readAllTokens(tz)
 
     // BEGIN
-    expect(t[1].line).toEqual(2)
-    expect(t[1].column).toEqual(7)
+    expect(t[0].line).toEqual(2)
+    expect(t[0].column).toEqual(7)
 
     // Newline after BEGIN
-    expect(t[2].line).toEqual(2)
-    expect(t[2].column).toEqual(12)
+    expect(t[1].line).toEqual(3)
+    expect(t[1].column).toEqual(9)
   })
 })

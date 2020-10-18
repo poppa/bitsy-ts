@@ -16,8 +16,6 @@ export class Tokenizer {
   #line = 1
   // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
   #col = 1
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  #tokens: Token[] = []
 
   constructor(input: Readonly<string>) {
     this.#input = input
@@ -28,23 +26,23 @@ export class Tokenizer {
     return this.#len
   }
 
-  public get tokens(): Token[] {
-    return this.#tokens
-  }
-
-  public tokenize(): this {
+  public *tokenize(): Generator<Token> {
     const boundWs = this.matchWhitespace.bind(this)
     const boundComment = this.matchComment.bind(this)
-    const boundIdent = this.identifierMatcher.bind(this)
+    const boundIdent = this.symbolMatcher.bind(this)
     const boundOp = this.operatorMatcher.bind(this)
 
     while (!this.done) {
       const curr = this.#cursor
 
-      this.pushToken(this.take(boundWs))
-        .pushToken(this.take(boundComment))
-        .pushToken(this.take(boundIdent))
-        .pushToken(this.take(boundOp))
+      this.ignore(this.take(boundWs))
+
+      const token =
+        this.take(boundComment) ?? this.take(boundIdent) ?? this.take(boundOp)
+
+      if (token) {
+        yield token
+      }
 
       if (curr === this.#cursor) {
         throw new Error(
@@ -86,13 +84,7 @@ export class Tokenizer {
     return x
   }
 
-  private pushToken(token: Maybe<Token>, assert?: string): this {
-    if (token) {
-      this.#tokens.push(token)
-    } else if (assert) {
-      throw new Error(assert)
-    }
-
+  private ignore(_token: Maybe<Token>): this {
     return this
   }
 
@@ -177,8 +169,8 @@ export class Tokenizer {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-invalid-this
-  private readonly identifierMatcher = this.makeSimpleMatcher(
-    CharCode.validIdentiferChars()
+  private readonly symbolMatcher = this.makeSimpleMatcher(
+    CharCode.validSymbolChars()
   )
 
   // eslint-disable-next-line @typescript-eslint/no-invalid-this
