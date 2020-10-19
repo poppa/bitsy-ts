@@ -7,7 +7,7 @@
   "author": "Pontus Östlund <ponost@roxen.com>",
   "license": "MIT",
   "scripts": {
-    "compile": "ts-node src/mod.ts",
+    "runtest": "ts-node src/__runtest.ts",
     "lint": "eslint src",
     "build": "tsc",
     "dev": "tsc -w",

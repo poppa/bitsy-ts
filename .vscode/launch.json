@@ -6,7 +6,7 @@
   "configurations": [
     {
       "name": "Launch Program",
-      "program": "${workspaceFolder}/src/mod.ts",
+      "program": "${workspaceFolder}/src/__runtest.ts",
       "request": "launch",
       "type": "node",
       "sourceMaps": true,

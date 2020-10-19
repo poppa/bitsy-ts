@@ -25,7 +25,7 @@ describe('Tokenizer test suite', () => {
   test('Expect comments to be handled', () => {
     const tz = new Tokenizer(`{this is a comment}`)
     const t = readAllTokens(tz)
-    expect(t[0].value).toEqual('{this is a comment}')
+    expect(t.length).toEqual(0)
   })
 
   test('Expect multiline comments to be handled', () => {
@@ -33,11 +33,8 @@ describe('Tokenizer test suite', () => {
       this is a comment
       over multiple lines}`)
 
-    const t = readAllTokens(tz)[0]
-
-    expect(t.value).toEqual(`{
-      this is a comment
-      over multiple lines}`)
+    const t = readAllTokens(tz)
+    expect(t.length).toEqual(0)
   })
 
   test('Expect line counter to work properly', () => {
@@ -51,11 +48,13 @@ describe('Tokenizer test suite', () => {
 
     const t = readAllTokens(tz)
 
+    console.log(`T:`, t)
+
     // BEGIN
     expect(t[0].line).toEqual(2)
     expect(t[0].column).toEqual(7)
 
-    // Newline after BEGIN
+    // Loop after BEGIN
     expect(t[1].line).toEqual(3)
     expect(t[1].column).toEqual(9)
   })

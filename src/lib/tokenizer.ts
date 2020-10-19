@@ -1,202 +1,182 @@
-import type { Maybe } from './types'
 import type { Token } from './token'
-import { makeToken } from './token'
-import * as CharCode from './charcode'
-
-type MatcherFn = () => Token | undefined
+import { Type } from './token'
 
 export class Tokenizer {
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  readonly #input: string
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  readonly #len: number
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  #cursor = 0
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  #line = 1
-  // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-  #col = 1
+  private readonly input: string
+  private readonly len: number
+  private cursor = 0
+  private line = 1
+  private col = 1
 
-  constructor(input: Readonly<string>) {
-    this.#input = input
-    this.#len = input.length
+  constructor(input: Readonly<string | Buffer>) {
+    this.input = typeof input === 'string' ? input : input.toString('utf8')
+    this.len = input.length
   }
 
   public get length(): number {
-    return this.#len
+    return this.len
   }
 
   public *tokenize(): Generator<Token> {
-    const boundWs = this.matchWhitespace.bind(this)
-    const boundComment = this.matchComment.bind(this)
-    const boundIdent = this.symbolMatcher.bind(this)
-    const boundOp = this.operatorMatcher.bind(this)
-
     while (!this.done) {
-      const curr = this.#cursor
+      const c = this.current
 
-      this.ignore(this.take(boundWs))
-
-      const token =
-        this.take(boundComment) ?? this.take(boundIdent) ?? this.take(boundOp)
-
-      if (token) {
-        yield token
+      if (c === '\n') {
+        this.addLine(1, 0)
       }
-
-      if (curr === this.#cursor) {
+      // Match space and tab
+      else if (c.match(/[ \t]/)) {
+        // Do nothing
+      }
+      // Comment start
+      else if (c === '{') {
+        this.readComment()
+      }
+      // Negative number
+      else if (c === '-' && this.next.match(/[1-9]/)) {
+        yield this.read(Type.Number, /[-_0-9]/)
+      }
+      // Regular number
+      else if (c.match(/[1-9]/)) {
+        yield this.read(Type.Number, /[_0-9]/)
+      }
+      // Symbol
+      else if (c.match(/[_a-zA-Z]/)) {
+        yield this.read(Type.Symbol, /[_a-zA-Z0-9]/)
+      }
+      // Operator
+      else if (c.match(/[-+*%/]/)) {
+        yield this.simpleToken(Type.Operator)
+      }
+      // Equal sign
+      else if (c === '=') {
+        yield this.simpleToken(Type.Equal)
+      }
+      // Syntax error
+      else {
         throw new Error(
-          `Unknown character ${this.currentChar} at ${this.#line}:${this.#col}`
+          `Unexpeted character ${c} at line ${this.line} column ${this.col}`
         )
       }
+
+      this.moveNext()
+    }
+  }
+
+  private get current(): string {
+    const c = this.input[this.cursor]
+
+    if (c === undefined) {
+      throw new Error(`Read beyond input lenth`)
     }
 
-    return this
+    return this.input[this.cursor]
   }
 
-  private get current(): number {
-    const c = this.#input.charCodeAt(this.#cursor)
-    return c
-  }
-
-  private get currentChar(): string {
-    return this.#input.charAt(this.#cursor)
-  }
-
-  private get next(): number {
-    return this.#input.charCodeAt(this.#cursor + 1)
+  private get next(): string {
+    return this.input[this.cursor + 1]
   }
 
   private get done(): boolean {
-    return isNaN(this.next)
+    return this.input[this.cursor] === undefined
   }
 
-  private takeAndMoveNextChar(): string {
-    const c = this.currentChar
-    this.#cursor += 1
-    this.#col += 1
+  private moveNext(): this {
+    this.cursor += 1
+    this.col += 1
 
-    return c
-  }
-
-  private take(matcher: MatcherFn): Token | undefined {
-    const x = matcher()
-    return x
-  }
-
-  private ignore(_token: Maybe<Token>): this {
     return this
   }
 
   private addLine(n?: number, col = 1): this {
-    this.#line += n ?? 1
-    this.#col = col
+    this.line += n ?? 1
+    this.col = col
 
     return this
   }
 
-  private moveCursor(n: number): this {
-    this.#cursor += n
-    this.#col += n
-
-    return this
+  private simpleToken(type: Type): Token {
+    return {
+      value: this.current,
+      line: this.line,
+      column: this.col,
+      position: this.cursor,
+      type,
+    }
   }
 
-  private matchWhitespace(): Maybe<Token> {
-    const valid = [
-      CharCode.Char.Space,
-      CharCode.Char.Tab,
-      CharCode.Char.Newline,
-    ]
-
-    const startCol = this.#col
-    const startLine = this.#line
+  private read(type: Type, pattern: RegExp): Token {
     const buf: string[] = []
 
-    while (valid.includes(this.current)) {
-      if (this.current === CharCode.Char.Newline) {
+    const startLine = this.line
+    const startCol = this.col
+    const startPos = this.cursor
+
+    while (!this.done) {
+      if (this.current.match(pattern)) {
+        buf.push(this.current)
+      } else {
+        this.cursor -= 1
+        break
+      }
+
+      this.moveNext()
+    }
+
+    if (!buf.length) {
+      throw new Error(`read() gave to result`)
+    }
+
+    return {
+      value: buf.join(''),
+      line: startLine,
+      column: startCol,
+      position: startPos,
+      type,
+    }
+  }
+
+  private readComment(): void {
+    this.expect('{')
+
+    const startLine = this.line
+    const startCol = this.col
+
+    this.moveNext()
+
+    while (!this.done) {
+      const c = this.current
+
+      if (c === '\n') {
         this.addLine(1, 0)
+      } else if (c === '}') {
+        break
       }
 
-      buf.push(this.takeAndMoveNextChar())
+      this.moveNext()
     }
 
-    if (buf.length) {
-      return makeToken({
-        column: startCol,
-        line: startLine,
-        position: this.#cursor,
-        value: buf.join(''),
-      })
-    } else {
-      return undefined
-    }
+    this.expect('}', { startCol, startLine })
   }
 
-  private matchComment(): Maybe<Token> {
-    if (this.current === CharCode.Char.CurlyLeft) {
-      const colStart = this.#col
-      const lineStart = this.#line
-      const posStart = this.#cursor
-      const endPos = this.#input.indexOf(
-        String.fromCharCode(CharCode.Char.CurlyRight),
-        this.#cursor + 1
-      )
+  private expect(
+    char: string,
+    opts?: { startLine: number; startCol: number }
+  ): void {
+    const safeCc = this.input[this.cursor]
 
-      if (endPos < 0) {
-        throw new Error(
-          `Comment close brace missing at ${lineStart}:${colStart}`
-        )
+    if (safeCc !== char) {
+      let msg =
+        `Expected ${char} got ${safeCc ?? 'end of input'}` +
+        ` at line ${this.line} column ${this.col}.`
+
+      if (opts) {
+        msg +=
+          ` Problem started at line ${opts.startLine}` +
+          ` column ${opts.startCol}.`
       }
 
-      const str = this.#input.substring(this.#cursor, endPos + 1)
-      const nLines =
-        str.split(String.fromCharCode(CharCode.Char.Newline)).length - 1
-
-      if (nLines) {
-        this.addLine(nLines)
-      }
-
-      this.moveCursor(str.length)
-
-      return makeToken({
-        column: colStart,
-        position: posStart,
-        line: lineStart,
-        value: str,
-      })
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-invalid-this
-  private readonly symbolMatcher = this.makeSimpleMatcher(
-    CharCode.validSymbolChars()
-  )
-
-  // eslint-disable-next-line @typescript-eslint/no-invalid-this
-  private readonly operatorMatcher = this.makeSimpleMatcher(
-    CharCode.validOperatorChars()
-  )
-
-  private makeSimpleMatcher(valid: number[]): MatcherFn {
-    return (): Maybe<Token> => {
-      const acc: string[] = []
-      const startCol = this.#col
-
-      while (valid.includes(this.current)) {
-        acc.push(this.takeAndMoveNextChar())
-      }
-
-      if (acc.length) {
-        return makeToken({
-          value: acc.join(''),
-          column: startCol,
-          line: this.#line,
-          position: this.#cursor,
-        })
-      }
-
-      return undefined
+      throw new Error(msg)
     }
   }
 }
