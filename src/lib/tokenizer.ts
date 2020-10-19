@@ -1,6 +1,13 @@
 import type { Token } from './token'
 import { Type } from './token'
 
+const NumberStart = /^[1-9]+(?![a-zA-Z])|^0(?![a-zA-Z0-9])/
+const SymbolStart = /^_|[a-zA-Z]/
+const OperatorStart = /[-+*%/]/
+const NegativeNumberRead = /[-_0-9]/
+const NumberRead = /[_0-9]/
+const SymbolRead = /[_a-zA-Z0-9]/
+
 export class Tokenizer {
   private readonly input: string
   private readonly len: number
@@ -25,7 +32,7 @@ export class Tokenizer {
         this.addLine(1, 0)
       }
       // Match space and tab
-      else if (c.match(/[ \t]/)) {
+      else if (c === ' ' || c === '\t') {
         // Do nothing
       }
       // Comment start
@@ -33,19 +40,19 @@ export class Tokenizer {
         this.readComment()
       }
       // Negative number
-      else if (c === '-' && this.next.match(/[1-9]/)) {
-        yield this.read(Type.Number, /[-_0-9]/)
+      else if (c === '-' && NumberStart.test(this.next)) {
+        yield this.read(Type.Number, NegativeNumberRead)
       }
       // Regular number
-      else if (c.match(/[1-9]/)) {
-        yield this.read(Type.Number, /[_0-9]/)
+      else if (this.test(NumberStart)) {
+        yield this.read(Type.Number, NumberRead)
       }
       // Symbol
-      else if (c.match(/[_a-zA-Z]/)) {
-        yield this.read(Type.Symbol, /[_a-zA-Z0-9]/)
+      else if (SymbolStart.test(c)) {
+        yield this.read(Type.Symbol, SymbolRead)
       }
       // Operator
-      else if (c.match(/[-+*%/]/)) {
+      else if (OperatorStart.test(c)) {
         yield this.simpleToken(Type.Operator)
       }
       // Equal sign
@@ -61,6 +68,11 @@ export class Tokenizer {
 
       this.moveNext()
     }
+  }
+
+  private test(re: RegExp): boolean {
+    const s = this.input.substring(this.cursor)
+    return re.test(s)
   }
 
   private get current(): string {
@@ -113,7 +125,7 @@ export class Tokenizer {
     const startPos = this.cursor
 
     while (!this.done) {
-      if (this.current.match(pattern)) {
+      if (pattern.test(this.current)) {
         buf.push(this.current)
       } else {
         this.cursor -= 1
