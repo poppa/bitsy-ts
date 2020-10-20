@@ -87,25 +87,27 @@ describe('Tokenizer test suite', () => {
 
   test('Verify that token types are set properly', () => {
     const t = readAllTokens(
-      new Tokenizer(`BEGIN n = 1 / 2 * 3 % 4 + 2 - 1 END`)
+      new Tokenizer(`BEGIN n = 1 / (2 * 3) % 4 + 2 - 1 END`)
     )
 
-    expect(t.length).toEqual(15)
+    expect(t.length).toEqual(17)
     expect(t[0].type).toEqual(Type.Symbol)
     expect(t[1].type).toEqual(Type.Symbol)
     expect(t[2].type).toEqual(Type.Equal)
     expect(t[3].type).toEqual(Type.Number)
     expect(t[4].type).toEqual(Type.Operator)
-    expect(t[5].type).toEqual(Type.Number)
-    expect(t[6].type).toEqual(Type.Operator)
-    expect(t[7].type).toEqual(Type.Number)
-    expect(t[8].type).toEqual(Type.Operator)
-    expect(t[9].type).toEqual(Type.Number)
+    expect(t[5].type).toEqual(Type.LeftParen)
+    expect(t[6].type).toEqual(Type.Number)
+    expect(t[7].type).toEqual(Type.Operator)
+    expect(t[8].type).toEqual(Type.Number)
+    expect(t[9].type).toEqual(Type.RightParen)
     expect(t[10].type).toEqual(Type.Operator)
     expect(t[11].type).toEqual(Type.Number)
     expect(t[12].type).toEqual(Type.Operator)
     expect(t[13].type).toEqual(Type.Number)
-    expect(t[14].type).toEqual(Type.Symbol)
+    expect(t[14].type).toEqual(Type.Operator)
+    expect(t[15].type).toEqual(Type.Number)
+    expect(t[16].type).toEqual(Type.Symbol)
   })
 
   test(`Verify that collatz.bitsy has the correct amount of tokens`, () => {

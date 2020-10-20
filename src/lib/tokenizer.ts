@@ -2,12 +2,6 @@ import type { Token } from './token'
 import { charToType } from './token'
 import { Type } from './token'
 
-const NumberStart = /^[1-9]+(?![a-zA-Z])|^0(?![a-zA-Z0-9])/
-const SymbolStart = /^_|[a-zA-Z]/
-const NegativeNumberRead = /[-_0-9]/
-const NumberRead = /[_0-9]/
-const SymbolRead = /[_a-zA-Z0-9]/
-
 export class Tokenizer {
   private readonly input: string
   private readonly len: number
@@ -40,20 +34,20 @@ export class Tokenizer {
         this.readComment()
       }
       // Negative number
-      else if (c === '-' && NumberStart.test(this.next)) {
-        yield this.read(Type.Number, NegativeNumberRead)
+      else if (c === '-' && /[0-9]/.test(this.input[this.cursor + 1])) {
+        yield this.readNumber()
       }
       // Regular number
-      else if (this.test(NumberStart)) {
-        yield this.read(Type.Number, NumberRead)
+      else if (/[0-9]/.test(c)) {
+        yield this.readNumber()
       }
       // Symbol
-      else if (SymbolStart.test(c)) {
-        yield this.read(Type.Symbol, SymbolRead)
+      else if (/[_a-zA-Z]/.test(c)) {
+        yield this.readSymbol()
       }
       // Operators, equal, and parenses
       else if (['(', ')', '+', '-', '*', '/', '%', '='].includes(c)) {
-        yield this.simpleToken()
+        yield this.currentToken()
       }
       // Syntax error
       else {
@@ -66,11 +60,6 @@ export class Tokenizer {
     }
   }
 
-  private test(re: RegExp): boolean {
-    const s = this.input.substring(this.cursor)
-    return re.test(s)
-  }
-
   private get current(): string {
     const c = this.input[this.cursor]
 
@@ -79,10 +68,6 @@ export class Tokenizer {
     }
 
     return this.input[this.cursor]
-  }
-
-  private get next(): string {
-    return this.input[this.cursor + 1]
   }
 
   private get done(): boolean {
@@ -96,6 +81,13 @@ export class Tokenizer {
     return this
   }
 
+  private pushback(): this {
+    this.cursor -= 1
+    this.col -= 1
+
+    return this
+  }
+
   private addLine(n?: number, col = 1): this {
     this.line += n ?? 1
     this.col = col
@@ -103,44 +95,64 @@ export class Tokenizer {
     return this
   }
 
-  private simpleToken(): Token {
+  private currentToken(typ?: Type): Token {
     return {
       value: this.current,
       line: this.line,
       column: this.col,
       position: this.cursor,
-      type: charToType(this.current),
+      type: typ ?? charToType(this.current),
     }
   }
 
-  private read(type: Type, pattern: RegExp): Token {
-    const buf: string[] = []
+  private readSymbol(): Token {
+    const initpos = this.positionInfo()
 
-    const startLine = this.line
-    const startCol = this.col
-    const startPos = this.cursor
+    let buf = this.current
+    const re = /[_a-zA-Z0-9]/
+    this.advance()
 
-    while (!this.done) {
-      if (pattern.test(this.current)) {
-        buf.push(this.current)
-      } else {
-        this.cursor -= 1
-        break
-      }
-
+    while (!this.done && re.test(this.current)) {
+      buf += this.current
       this.advance()
     }
 
-    if (!buf.length) {
-      throw new Error(`read() gave to result`)
-    }
+    this.pushback()
 
     return {
-      value: buf.join(''),
-      line: startLine,
-      column: startCol,
-      position: startPos,
-      type,
+      ...initpos,
+      type: Type.Symbol,
+      value: buf,
+    }
+  }
+
+  private readNumber(): Token {
+    const initpos = this.positionInfo()
+
+    let buf = this.current
+    const re = /[_0-9]/
+
+    this.advance()
+
+    while (!this.done && re.test(this.current)) {
+      buf += this.current
+      this.advance()
+    }
+
+    this.pushback()
+
+    return {
+      ...initpos,
+      type: Type.Number,
+      value: buf,
+    }
+  }
+
+  private positionInfo(): { line: number; column: number; position: number } {
+    return {
+      line: this.line,
+      column: this.col,
+      position: this.cursor,
     }
   }
 

@@ -1,34 +1,9 @@
 import type { Token } from './token'
 import type { Tokenizer } from './tokenizer'
 import type { Maybe } from './types'
-import { typeMap } from './token'
 import { Keyword } from './grammar'
 import { Type } from './token'
-
-class SyntaxError extends Error {
-  constructor(token: Token, expected: string) {
-    super()
-    this.name = `SyntaxError`
-    this.message =
-      `Syntax error at line ${token.line} column ${token.column}. ` +
-      `Expected ${expected} got ${token.value}`
-  }
-}
-
-class TokenTypeError extends Error {
-  constructor(token: Token, expected: Type | Type[]) {
-    super()
-
-    const typeTrans = Array.isArray(expected)
-      ? expected.map((n) => typeMap[n]).join(', ')
-      : typeMap[expected]
-
-    this.name = 'TokenTypeError'
-    this.message =
-      `Syntax error at line ${token.line} column ${token.column}. ` +
-      `Expected type ${typeTrans} got ${typeMap[token.type]}`
-  }
-}
+import { TokenTypeError, SyntaxError } from './error'
 
 export class Parser {
   private readonly tz: Tokenizer

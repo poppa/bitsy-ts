@@ -46,10 +46,3 @@ export function charToType(c: string): Type {
       throw new Error(`Unknown character`)
   }
 }
-
-export type SimpleToken = Omit<Token, 'type'>
-
-export function makeToken(tok: Token): Token {
-  // const t = Object.create(tok)
-  return tok
-}
