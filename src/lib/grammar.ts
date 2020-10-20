@@ -1,4 +1,4 @@
-export const enum Keyword {
+export enum Keyword {
   Begin = 'BEGIN',
   End = 'END',
   Loop = 'LOOP',
@@ -11,18 +11,7 @@ export const enum Keyword {
   Else = 'ELSE',
 }
 
-export const keywords = [
-  'BEGIN',
-  'END',
-  'LOOP',
-  'BREAK',
-  'PRINT',
-  'READ',
-  'IFZ',
-  'IFP',
-  'IFN',
-  'ELSE',
-]
+export const keywords = Object.values(Keyword) as string[]
 
 export function isKeyword(word: string): word is Keyword {
   return keywords.includes(word)
