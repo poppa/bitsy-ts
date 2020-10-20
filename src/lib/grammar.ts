@@ -11,7 +11,7 @@ export const enum Keyword {
   Else = 'ELSE',
 }
 
-const keywords = [
+export const keywords = [
   'BEGIN',
   'END',
   'LOOP',
@@ -27,3 +27,5 @@ const keywords = [
 export function isKeyword(word: string): word is Keyword {
   return keywords.includes(word)
 }
+
+export const knownAtoms = ['(', ')', '+', '-', '*', '/', '%', '=']

@@ -4,7 +4,7 @@ import { join } from 'path'
 import type { Token } from '../lib/token'
 import { Type } from '../lib/token'
 import { Tokenizer } from '../lib/tokenizer'
-import { isKeyword } from '../lib/grammar'
+import { isKeyword, keywords } from '../lib/grammar'
 
 function readSampleFile(name: string): Buffer {
   return readFileSync(join(__dirname, '..', '..', 'samples', name))
@@ -76,33 +76,26 @@ describe('Tokenizer test suite', () => {
   })
 
   test('Expect keywords to be recognized', () => {
-    const t = readAllTokens(
-      new Tokenizer(`
-        BEGIN
-        LOOP
-        BREAK
-        IFZ
-        IFP
-        IFN
-        ELSE
-        PRINT
-        READ
-        END `)
-    )
-
+    const t = readAllTokens(new Tokenizer(keywords.join('\n')))
     expect(t.every((tt) => isKeyword(tt.value))).toEqual(true)
     expect(t.every((tt) => tt.type === Type.Keyword)).toEqual(true)
   })
 
-  test.skip('Expect invalid number to throw', () => {
-    try {
-      const t = readAllTokens(new Tokenizer(`BEGIN 12a END`))
-      console.log(`Tokens:`, t)
-      fail(new Error(`Expected 12a to throw an error`))
-    } catch (err: unknown) {
-      console.error('Error:', err)
-      expect(err instanceof Error).toEqual(true)
-    }
+  test(`Expect keywords to be defined`, () => {
+    const kw = [
+      'BEGIN',
+      'END',
+      'LOOP',
+      'BREAK',
+      'PRINT',
+      'READ',
+      'IFZ',
+      'IFP',
+      'IFN',
+      'ELSE',
+    ]
+
+    expect(kw.every((k) => keywords.includes(k)))
   })
 
   test('Verify that token types are set properly', () => {

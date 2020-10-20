@@ -1,4 +1,4 @@
-import { isKeyword } from './grammar'
+import { isKeyword, knownAtoms } from './grammar'
 import type { Token } from './token'
 import { charToType } from './token'
 import { Type } from './token'
@@ -47,7 +47,7 @@ export class Tokenizer {
         yield this.readSymbol()
       }
       // Operators, equal, and parenses
-      else if (['(', ')', '+', '-', '*', '/', '%', '='].includes(c)) {
+      else if (knownAtoms.includes(c)) {
         yield this.currentToken()
       }
       // Syntax error
