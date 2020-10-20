@@ -1,3 +1,4 @@
+import { isKeyword } from './grammar'
 import type { Token } from './token'
 import { charToType } from './token'
 import { Type } from './token'
@@ -121,7 +122,7 @@ export class Tokenizer {
 
     return {
       ...initpos,
-      type: Type.Symbol,
+      type: isKeyword(buf) ? Type.Keyword : Type.Symbol,
       value: buf,
     }
   }

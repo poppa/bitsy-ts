@@ -5,6 +5,7 @@ export const enum Type {
   Number,
   LeftParen,
   RightParen,
+  Keyword,
 }
 
 export const typeMap = [
@@ -14,6 +15,7 @@ export const typeMap = [
   'Number',
   'LeftParen',
   'RightParen',
+  'Keyword',
 ]
 
 export interface Token {

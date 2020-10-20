@@ -4,6 +4,7 @@ import { join } from 'path'
 import type { Token } from '../lib/token'
 import { Type } from '../lib/token'
 import { Tokenizer } from '../lib/tokenizer'
+import { isKeyword } from '../lib/grammar'
 
 function readSampleFile(name: string): Buffer {
   return readFileSync(join(__dirname, '..', '..', 'samples', name))
@@ -74,6 +75,25 @@ describe('Tokenizer test suite', () => {
     expect(t[2].type).toEqual(Type.Number)
   })
 
+  test('Expect keywords to be recognized', () => {
+    const t = readAllTokens(
+      new Tokenizer(`
+        BEGIN
+        LOOP
+        BREAK
+        IFZ
+        IFP
+        IFN
+        ELSE
+        PRINT
+        READ
+        END `)
+    )
+
+    expect(t.every((tt) => isKeyword(tt.value))).toEqual(true)
+    expect(t.every((tt) => tt.type === Type.Keyword)).toEqual(true)
+  })
+
   test.skip('Expect invalid number to throw', () => {
     try {
       const t = readAllTokens(new Tokenizer(`BEGIN 12a END`))
@@ -91,7 +111,7 @@ describe('Tokenizer test suite', () => {
     )
 
     expect(t.length).toEqual(17)
-    expect(t[0].type).toEqual(Type.Symbol)
+    expect(t[0].type).toEqual(Type.Keyword)
     expect(t[1].type).toEqual(Type.Symbol)
     expect(t[2].type).toEqual(Type.Equal)
     expect(t[3].type).toEqual(Type.Number)
@@ -107,7 +127,7 @@ describe('Tokenizer test suite', () => {
     expect(t[13].type).toEqual(Type.Number)
     expect(t[14].type).toEqual(Type.Operator)
     expect(t[15].type).toEqual(Type.Number)
-    expect(t[16].type).toEqual(Type.Symbol)
+    expect(t[16].type).toEqual(Type.Keyword)
   })
 
   test(`Verify that collatz.bitsy has the correct amount of tokens`, () => {

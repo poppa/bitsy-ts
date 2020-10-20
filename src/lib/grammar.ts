@@ -10,3 +10,20 @@ export const enum Keyword {
   Ifn = 'IFN',
   Else = 'ELSE',
 }
+
+const keywords = [
+  'BEGIN',
+  'END',
+  'LOOP',
+  'BREAK',
+  'PRINT',
+  'READ',
+  'IFZ',
+  'IFP',
+  'IFN',
+  'ELSE',
+]
+
+export function isKeyword(word: string): word is Keyword {
+  return keywords.includes(word)
+}
