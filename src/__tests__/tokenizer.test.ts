@@ -74,6 +74,17 @@ describe('Tokenizer test suite', () => {
     expect(t[2].type).toEqual(Type.Number)
   })
 
+  test.skip('Expect invalid number to throw', () => {
+    try {
+      const t = readAllTokens(new Tokenizer(`BEGIN 12a END`))
+      console.log(`Tokens:`, t)
+      fail(new Error(`Expected 12a to throw an error`))
+    } catch (err: unknown) {
+      console.error('Error:', err)
+      expect(err instanceof Error).toEqual(true)
+    }
+  })
+
   test('Verify that token types are set properly', () => {
     const t = readAllTokens(
       new Tokenizer(`BEGIN n = 1 / 2 * 3 % 4 + 2 - 1 END`)

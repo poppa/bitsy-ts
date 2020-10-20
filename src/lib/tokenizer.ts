@@ -1,9 +1,9 @@
 import type { Token } from './token'
+import { charToType } from './token'
 import { Type } from './token'
 
 const NumberStart = /^[1-9]+(?![a-zA-Z])|^0(?![a-zA-Z0-9])/
 const SymbolStart = /^_|[a-zA-Z]/
-const OperatorStart = /[-+*%/]/
 const NegativeNumberRead = /[-_0-9]/
 const NumberRead = /[_0-9]/
 const SymbolRead = /[_a-zA-Z0-9]/
@@ -51,13 +51,9 @@ export class Tokenizer {
       else if (SymbolStart.test(c)) {
         yield this.read(Type.Symbol, SymbolRead)
       }
-      // Operator
-      else if (OperatorStart.test(c)) {
-        yield this.simpleToken(Type.Operator)
-      }
-      // Equal sign
-      else if (c === '=') {
-        yield this.simpleToken(Type.Equal)
+      // Operators, equal, and parenses
+      else if (['(', ')', '+', '-', '*', '/', '%', '='].includes(c)) {
+        yield this.simpleToken()
       }
       // Syntax error
       else {
@@ -66,7 +62,7 @@ export class Tokenizer {
         )
       }
 
-      this.moveNext()
+      this.advance()
     }
   }
 
@@ -93,7 +89,7 @@ export class Tokenizer {
     return this.input[this.cursor] === undefined
   }
 
-  private moveNext(): this {
+  private advance(): this {
     this.cursor += 1
     this.col += 1
 
@@ -107,13 +103,13 @@ export class Tokenizer {
     return this
   }
 
-  private simpleToken(type: Type): Token {
+  private simpleToken(): Token {
     return {
       value: this.current,
       line: this.line,
       column: this.col,
       position: this.cursor,
-      type,
+      type: charToType(this.current),
     }
   }
 
@@ -132,7 +128,7 @@ export class Tokenizer {
         break
       }
 
-      this.moveNext()
+      this.advance()
     }
 
     if (!buf.length) {
@@ -154,7 +150,7 @@ export class Tokenizer {
     const startLine = this.line
     const startCol = this.col
 
-    this.moveNext()
+    this.advance()
 
     while (!this.done) {
       const c = this.current
@@ -165,7 +161,7 @@ export class Tokenizer {
         break
       }
 
-      this.moveNext()
+      this.advance()
     }
 
     this.expect('}', { startCol, startLine })

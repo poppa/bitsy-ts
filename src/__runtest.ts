@@ -1,9 +1,13 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { Parser } from './lib/parser'
 import { Tokenizer } from './lib/tokenizer'
-const data = readFileSync(join(__dirname, '..', 'samples', 'collatz.bitsy'))
-const t = new Tokenizer(data)
 
-for (const tok of t.tokenize()) {
-  console.log(`Tok:`, tok)
-}
+const t = new Tokenizer(`
+  BEGIN
+    LOOP
+      n = 1
+      BREAK
+    END
+  END`)
+
+const p = new Parser(t)
+p.parse()
