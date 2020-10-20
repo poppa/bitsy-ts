@@ -1,7 +1,6 @@
 import { isKeyword, knownAtoms } from './grammar'
 import type { Token } from './token'
-import { charToType } from './token'
-import { Type } from './token'
+import { charToType, Type } from './token'
 
 export class Tokenizer {
   private readonly input: string
