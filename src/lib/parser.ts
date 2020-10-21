@@ -4,15 +4,18 @@ import type { Maybe } from './types'
 import { Keyword } from './grammar'
 import { Type } from './token'
 import { TokenTypeError, SyntaxError } from './error'
+import type { CodeGenerator, EventType } from './codegen'
 
 export class Parser {
   private readonly tz: Tokenizer
+  private readonly generator: CodeGenerator
   private tzgen: Maybe<Generator<Token>>
   private token: Maybe<Token>
   private isDone = false
 
-  constructor(tokenizer: Tokenizer) {
+  constructor(tokenizer: Tokenizer, generator: CodeGenerator) {
     this.tz = tokenizer
+    this.generator = generator
   }
 
   public parse(): void {
@@ -22,8 +25,10 @@ export class Parser {
   }
 
   private program(): void {
+    this.emit('program start')
     this.expectKeyword(Keyword.Begin)
     this.parseBlock()
+    this.emit('program end')
     this.expectKeyword(Keyword.End)
   }
 
@@ -32,9 +37,6 @@ export class Parser {
       const t = this.current
 
       switch (t.value) {
-        case Keyword.End:
-          break
-
         case Keyword.Loop:
           this.loop()
           break
@@ -49,15 +51,15 @@ export class Parser {
       }
     }
 
-    this.expectKeyword(Keyword.End)
-
     return undefined
   }
 
   private assigment(): void {
+    this.emit('assignment')
     this.expectType(Type.Symbol)
     this.expectType(Type.Equal)
     this.expression()
+    this.emit('assignment end')
   }
 
   private expression(): void {
@@ -65,6 +67,7 @@ export class Parser {
 
     while (['+', '-'].includes(this.current.value)) {
       const op = this.current.type
+      this.emit('operator')
       this.expectType(op)
       this.term()
     }
@@ -75,6 +78,7 @@ export class Parser {
 
     while (['*', '/', '%'].includes(this.current.value)) {
       const op = this.current.type
+      this.emit('operator')
       this.expectType(op)
       this.factor()
     }
@@ -84,6 +88,7 @@ export class Parser {
     const c = this.current
 
     if (['+', '-'].includes(c.value)) {
+      this.emit('operator')
       this.expectType(Type.Operator)
     }
 
@@ -94,23 +99,30 @@ export class Parser {
     const c = this.current
 
     if (c.type === Type.Number) {
+      this.emit('number')
       this.expectType(Type.Number)
     } else if (c.type === Type.Symbol) {
+      this.emit('symbol')
       this.expectType(Type.Symbol)
     } else {
+      this.emit('left paren')
       this.expectType(Type.LeftParen)
       this.expression()
+      this.emit('right paren')
       this.expectType(Type.RightParen)
     }
   }
 
   private loop(): void {
+    this.emit('loop start')
     this.expectKeyword(Keyword.Loop)
     this.parseBlock()
+    this.emit('loop end')
     this.expectKeyword(Keyword.End)
   }
 
   private break(): void {
+    this.emit('break')
     this.expectKeyword(Keyword.Break)
   }
 
@@ -161,5 +173,9 @@ export class Parser {
     this.token = v.value
 
     return this
+  }
+
+  private emit(event: EventType, token?: Token): void {
+    this.generator.emit(event, token ?? this.current)
   }
 }
