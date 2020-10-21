@@ -4,7 +4,7 @@ import { Tokenizer } from './lib/tokenizer'
 const t = new Tokenizer(`
   BEGIN
     LOOP
-      n = 1
+      n = (1 + 2)
       BREAK
     END
   END`)

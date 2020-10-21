@@ -16,44 +16,36 @@ export class Parser {
   }
 
   public parse(): void {
-    return this.parseProgram()
+    // Read the first token
+    this.advance()
+    return this.program()
   }
 
-  private parseProgram(): void {
-    // Read the first token
-    this.readNext()
+  private program(): void {
     this.expectKeyword(Keyword.Begin)
     this.parseBlock()
     this.expectKeyword(Keyword.End)
   }
 
   private parseBlock(): Maybe<void> {
-    while (!this.isDone) {
-      const t = this.readNext().current
+    while (!this.isDone && this.current.value !== Keyword.End) {
+      const t = this.current
 
       switch (t.value) {
         case Keyword.End:
           break
 
         case Keyword.Loop:
-          this.parseLoop()
+          this.loop()
           break
 
         case Keyword.Break:
-          this.parseBreak()
+          this.break()
           break
 
         default:
-          this.expectType(Type.Symbol)
-
-          switch (t.type) {
-            case Type.Symbol:
-              this.parseAssigment()
-              break
-
-            default:
-              break
-          }
+          this.assigment()
+          break
       }
     }
 
@@ -62,48 +54,85 @@ export class Parser {
     return undefined
   }
 
-  private parseAssigment(): void {
+  private assigment(): void {
     this.expectType(Type.Symbol)
-    // const sym = this.current
-
-    this.readNext()
     this.expectType(Type.Equal)
-    this.readNext()
-    this.parseExpression()
+    this.expression()
   }
 
-  private parseExpression(): void {
+  private expression(): void {
+    this.term()
+
+    while (['+', '-'].includes(this.current.value)) {
+      const op = this.current.type
+      this.expectType(op)
+      this.term()
+    }
+  }
+
+  private term(): void {
+    this.signedFactor()
+
+    while (['*', '/', '%'].includes(this.current.value)) {
+      const op = this.current.type
+      this.expectType(op)
+      this.factor()
+    }
+  }
+
+  private signedFactor(): void {
     const c = this.current
 
-    if (c.type !== Type.Symbol && c.type !== Type.Number) {
-      throw new TokenTypeError(c, [Type.Symbol, Type.Number])
+    if (['+', '-'].includes(c.value)) {
+      this.expectType(Type.Operator)
     }
 
-    this.readNext()
+    this.factor()
   }
 
-  private parseLoop(): void {
+  private factor(): void {
+    const c = this.current
+
+    if (c.type === Type.Number) {
+      this.expectType(Type.Number)
+    } else if (c.type === Type.Symbol) {
+      this.expectType(Type.Symbol)
+    } else {
+      this.expectType(Type.LeftParen)
+      this.expression()
+      this.expectType(Type.RightParen)
+    }
+  }
+
+  private loop(): void {
     this.expectKeyword(Keyword.Loop)
     this.parseBlock()
     this.expectKeyword(Keyword.End)
   }
 
-  private parseBreak(): void {
+  private break(): void {
     this.expectKeyword(Keyword.Break)
-    this.readNext()
   }
 
-  private expectKeyword(word: string): this {
+  private expectKeyword(word: string, advance = true): this {
     if (this.current.value !== word) {
       throw new SyntaxError(this.current, word)
+    }
+
+    if (advance) {
+      this.advance()
     }
 
     return this
   }
 
-  private expectType(typ: Type): this {
+  private expectType(typ: Type, advance = true): this {
     if (this.current.type !== typ) {
       throw new TokenTypeError(this.current, typ)
+    }
+
+    if (advance) {
+      this.advance()
     }
 
     return this
@@ -117,7 +146,7 @@ export class Parser {
     return this.token
   }
 
-  private readNext(): this {
+  private advance(): this {
     if (!this.tzgen) {
       this.tzgen = this.tz.tokenize()
     }
