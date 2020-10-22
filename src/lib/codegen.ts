@@ -1,25 +1,6 @@
+/* eslint-disable @typescript-eslint/no-invalid-this */
 import type { Token } from './token'
-
-export type EventType =
-  | 'program start'
-  | 'program end'
-  | 'loop start'
-  | 'loop end'
-  | 'break'
-  | 'ifz start'
-  | 'ifz end'
-  | 'ifp start'
-  | 'ifp end'
-  | 'ifn start'
-  | 'ifn end'
-  | 'else'
-  | 'assignment'
-  | 'assignment end'
-  | 'number'
-  | 'operator'
-  | 'left paren'
-  | 'right paren'
-  | 'symbol'
+import { EventType } from './events'
 
 interface Variable {
   token: Token
@@ -27,10 +8,10 @@ interface Variable {
 }
 
 class CodeBuffer {
-  private ind = 0
+  protected ind = 0
   private readonly b: string[] = []
 
-  public write(t: string, ind?: '+' | '-' | '='): this {
+  protected write(t: string, ind?: '+' | '-' | '='): this {
     if (ind && ind === '-') {
       this.ind -= 1
     }
@@ -48,69 +29,39 @@ class CodeBuffer {
     return this
   }
 
-  public nl(): this {
+  protected nl(): this {
     this.b.push('\n')
     return this
   }
 
-  public render(): string {
+  protected render(): string {
     return this.b.join('')
   }
 }
 
-export class CodeGenerator {
+type EventHandler = (token: Token) => void | CodeGenerator
+type EventTypeMap = { [key in EventType]?: EventHandler }
+
+const Noop = (): void => void 0
+function BlockEnd<T extends CodeBuffer>(this: T): void {
+  this.write('}', '-').nl()
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
+export class CodeGenerator extends CodeBuffer implements EventTypeMap {
   protected indent = 0
   protected variables: Map<string, Variable> = new Map()
-  protected buf = new CodeBuffer()
 
   public render(): string {
-    return `${this.header()}\n${this.buf.render()}\n`
+    return `${this.header()}\n${super.render()}`
   }
 
   public emit(event: EventType, token: Token): void {
-    switch (event) {
-      case 'assignment':
-        this.startAssignment(token)
-        break
+    const fn = this[event]
 
-      case 'assignment end':
-        this.endAssignment()
-        break
-
-      case 'loop start':
-        this.startLoop()
-        break
-
-      case 'loop end':
-        this.endBlock()
-        break
-
-      case 'break':
-        this.break()
-        break
-
-      case 'left paren':
-        this.leftParen()
-        break
-
-      case 'right paren':
-        this.rightParen()
-        break
-
-      case 'operator':
-        this.operator(token)
-        break
-
-      case 'number':
-        this.number(token)
-        break
-
-      case 'symbol':
-        this.symbol(token)
-        break
-
-      default:
-      // throw new Error(`Unhandled event ${event}`)
+    if (typeof fn !== 'undefined') {
+      fn(token)
     }
   }
 
@@ -118,25 +69,28 @@ export class CodeGenerator {
     let pre = ''
 
     this.variables.forEach((v) => {
-      pre += `${v.reassigned ? 'let' : 'const'} ${v.token.value} = 0\n`
+      pre += `${v.reassigned ? 'let' : 'let'} ${v.token.value} = 0\n`
     })
 
     return pre
   }
 
-  protected startLoop(): void {
-    this.buf.write('while (true) {', '+').nl()
+  // Event handlers
+
+  protected [EventType.ProgramStart] = Noop
+  protected [EventType.ProgramEnd] = Noop
+  protected [EventType.Read] = Noop
+  protected [EventType.ReadEnd] = Noop
+  protected [EventType.Ifn] = Noop
+  protected [EventType.Ifp] = Noop
+
+  protected [EventType.Else] = (): void => {
+    this.ind -= 1
+    this.write('} else {', '=').nl()
+    this.ind += 1
   }
 
-  protected endBlock(): void {
-    this.buf.write('}', '-').nl()
-  }
-
-  protected break(): void {
-    this.buf.write('break', '=').nl()
-  }
-
-  protected startAssignment(token: Token): void {
+  protected [EventType.Assignment] = (token: Token): void => {
     const prev = this.variables.get(token.value)
 
     if (prev) {
@@ -145,33 +99,32 @@ export class CodeGenerator {
       this.variables.set(token.value, { token })
     }
 
-    this.buf.write(`${token.value} = `, '=')
+    this.write(`${token.value} = `, '=')
   }
 
-  protected endAssignment(): void {
-    this.buf.nl()
-  }
+  protected [EventType.Ifz] = (): this => this.write(`if (!`, '+')
+  protected [EventType.IfEnd] = (): this => this.write(`) {`).nl()
+  protected [EventType.Print] = (): this => this.write('console.log(', '=')
+  protected [EventType.PrintEnd] = (): this => this.write(')').nl()
+  protected [EventType.BlockEnd] = BlockEnd.bind(this)
+  protected [EventType.LoopEnd] = BlockEnd.bind(this)
+  protected [EventType.Break] = (): this => this.write('break', '=').nl()
+  protected [EventType.AssignmentEnd] = (): this => this.nl()
+  protected [EventType.LeftParen] = (): this => this.write('(')
+  protected [EventType.RightParen] = (): this => this.write(')')
+  protected [EventType.Number] = (token: Token): this => this.write(token.value)
 
-  protected leftParen(): void {
-    this.buf.write('(')
-  }
+  protected [EventType.LoopStart] = (): this =>
+    this.write('while (true) {', '+').nl()
 
-  protected rightParen(): void {
-    this.buf.write(')')
-  }
+  protected [EventType.Operator] = (token: Token): this =>
+    this.write(` ${token.value} `)
 
-  protected number(token: Token): void {
-    this.buf.write(token.value)
-  }
-
-  protected operator(token: Token): void {
-    this.buf.write(` ${token.value} `)
-  }
-
-  protected symbol(token: Token): void {
+  protected [EventType.Symbol] = (token: Token): void => {
     if (!this.variables.has(token.value)) {
       throw new Error(
-        `Undefined variable used in expression at line ${token.line} column ${token.column}`
+        `Undefined variable used in expression at line ` +
+          `${token.line} column ${token.column}`
       )
     } else {
       const v = this.variables.get(token.value)
@@ -181,16 +134,20 @@ export class CodeGenerator {
       }
     }
 
-    this.buf.write(`${token.value}`)
+    this.write(`${token.value}`)
   }
 }
 
 export class TypescriptGenerator extends CodeGenerator {
   protected header(): string {
-    let pre = ''
+    let pre =
+      `/* Generated ${new Date().toISOString()} */\n` +
+      `/* eslint-disable no-constant-condition */\n` +
+      `/* eslint-disable @typescript-eslint/naming-convention */\n` +
+      `/* eslint-disable @typescript-eslint/no-inferrable-types */\n\n`
 
     this.variables.forEach((v) => {
-      pre += `${v.reassigned ? 'let' : 'const'} ${v.token.value}: number = 0\n`
+      pre += `${v.reassigned ? 'let' : 'let'} ${v.token.value}: number = 0\n`
     })
 
     return pre

@@ -34,7 +34,7 @@ export class Tokenizer {
         this.readComment()
       }
       // Negative number
-      else if (c === '-' && /[0-9]/.test(this.input[this.cursor + 1])) {
+      else if (this.isNegativeNumber()) {
         yield this.readNumber()
       }
       // Regular number
@@ -58,6 +58,20 @@ export class Tokenizer {
 
       this.advance()
     }
+  }
+
+  private isNegativeNumber(): boolean {
+    if (this.current !== '-') {
+      return false
+    } else if (!/[0-9]/.test(this.input[this.cursor + 1])) {
+      return false
+    }
+
+    if (/[a-zA-Z0-9]/.test(this.input[this.cursor - 1])) {
+      return false
+    }
+
+    return true
   }
 
   private get current(): string {
