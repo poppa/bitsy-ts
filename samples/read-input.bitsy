@@ -1,0 +1,4 @@
+BEGIN
+  READ inp
+  PRINT inp
+END

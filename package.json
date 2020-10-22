@@ -12,7 +12,11 @@
     "lint": "eslint src",
     "build": "tsc",
     "dev": "tsc -w",
-    "test": "jest"
+    "test": "jest",
+    "bitsy": "ts-node src/bin/bitsy.ts",
+    "bitsy:js": "node dist/bin/bitsy.js",
+    "bitsy:compile": "ts-node src/bin/compile.ts",
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@types/jest": "^26.0.14",

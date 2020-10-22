@@ -53,6 +53,10 @@ export class Parser {
           this.print()
           break
 
+        case Keyword.Read:
+          this.read()
+          break
+
         case Keyword.Ifz: // fall-through
         case Keyword.Ifp: // fall-through
         case Keyword.Ifn:
@@ -66,6 +70,13 @@ export class Parser {
     }
 
     return undefined
+  }
+
+  private read(): void {
+    this.emit(EventType.Read)
+    this.expectType(Type.Keyword)
+    this.expression()
+    this.emit(EventType.ReadEnd)
   }
 
   private print(): void {

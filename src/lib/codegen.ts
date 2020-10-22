@@ -50,11 +50,16 @@ function BlockEnd<T extends CodeBuffer>(this: T): void {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 export class CodeGenerator extends CodeBuffer implements EventTypeMap {
-  protected indent = 0
+  protected ind = 1
   protected variables: Map<string, Variable> = new Map()
+  protected preamble: Map<string, string> = new Map()
 
   public render(): string {
-    return `${this.header()}\n${super.render()}`
+    return (
+      `(async function main() {\n` +
+      `${this.header()}\n${super.render()}` +
+      `})()`
+    )
   }
 
   public emit(event: EventType, token: Token): void {
@@ -69,7 +74,7 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
     let pre = ''
 
     this.variables.forEach((v) => {
-      pre += `${v.reassigned ? 'let' : 'let'} ${v.token.value} = 0\n`
+      pre += `  ${v.reassigned ? 'let' : 'let'} ${v.token.value} = 0\n`
     })
 
     return pre
@@ -79,10 +84,25 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
 
   protected [EventType.ProgramStart] = Noop
   protected [EventType.ProgramEnd] = Noop
-  protected [EventType.Read] = Noop
-  protected [EventType.ReadEnd] = Noop
-  protected [EventType.Ifn] = Noop
-  protected [EventType.Ifp] = Noop
+
+  protected [EventType.Read] = (): void => {
+    if (!this.preamble.has('readline')) {
+      this.preamble.set(
+        'readline',
+        `const __readline__ = require('readline').createInterface({
+          input: process.stdin,
+          output: process.stdout
+        })
+        `
+      )
+    }
+
+    // this.write(`() => {`, '=')
+  }
+
+  protected [EventType.ReadEnd] = (): void => {
+    this.write(` = readStdIn()`).nl()
+  }
 
   protected [EventType.Else] = (): void => {
     this.ind -= 1
@@ -102,7 +122,9 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
     this.write(`${token.value} = `, '=')
   }
 
-  protected [EventType.Ifz] = (): this => this.write(`if (!`, '+')
+  protected [EventType.Ifp] = (): this => this.write(`if (0 < `, '+')
+  protected [EventType.Ifz] = (): this => this.write(`if (0 === `, '+')
+  protected [EventType.Ifn] = (): this => this.write(`if (0 > `, '+')
   protected [EventType.IfEnd] = (): this => this.write(`) {`).nl()
   protected [EventType.Print] = (): this => this.write('console.log(', '=')
   protected [EventType.PrintEnd] = (): this => this.write(')').nl()
@@ -122,10 +144,11 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
 
   protected [EventType.Symbol] = (token: Token): void => {
     if (!this.variables.has(token.value)) {
-      throw new Error(
-        `Undefined variable used in expression at line ` +
-          `${token.line} column ${token.column}`
-      )
+      // throw new Error(
+      //   `Undefined variable used in expression at line ` +
+      //     `${token.line} column ${token.column}`
+      // )
+      this.variables.set(token.value, { token })
     } else {
       const v = this.variables.get(token.value)
 
@@ -147,7 +170,7 @@ export class TypescriptGenerator extends CodeGenerator {
       `/* eslint-disable @typescript-eslint/no-inferrable-types */\n\n`
 
     this.variables.forEach((v) => {
-      pre += `${v.reassigned ? 'let' : 'let'} ${v.token.value}: number = 0\n`
+      pre += `  ${v.reassigned ? 'let' : 'let'} ${v.token.value}: number = 0\n`
     })
 
     return pre
