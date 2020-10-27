@@ -1,0 +1,3 @@
+[submodule "bitsyspec"]
+	path = bitsyspec
+	url = https://github.com/apbendi/bitsyspec.git
