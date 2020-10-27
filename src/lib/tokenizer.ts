@@ -2,12 +2,24 @@ import { isKeyword, knownAtoms } from './grammar'
 import type { Token } from './token'
 import { charToType, Type } from './token'
 
+interface PositionInfo {
+  line: number
+  column: number
+  position: number
+}
+
+interface ReadContext {
+  buf: string
+  pos?: PositionInfo
+}
+
 export class Tokenizer {
   private readonly input: string
   private readonly len: number
   private cursor = 0
   private line = 1
   private col = 1
+  public keepComments = false
 
   constructor(input: Readonly<string | Buffer>) {
     this.input = typeof input === 'string' ? input : input.toString('utf8')
@@ -31,7 +43,11 @@ export class Tokenizer {
       }
       // Comment start
       else if (c === '{') {
-        this.readComment()
+        if (this.keepComments) {
+          yield this.readCommentToken()
+        } else {
+          this.readComment()
+        }
       }
       // Negative number
       else if (this.isNegativeNumber()) {
@@ -162,7 +178,7 @@ export class Tokenizer {
     }
   }
 
-  private positionInfo(): { line: number; column: number; position: number } {
+  private positionInfo(): PositionInfo {
     return {
       line: this.line,
       column: this.col,
@@ -170,11 +186,19 @@ export class Tokenizer {
     }
   }
 
-  private readComment(): void {
+  private readComment<T extends ReadContext>(ctx?: T | undefined): void {
     this.expect('{')
 
     const startLine = this.line
     const startCol = this.col
+
+    if (ctx) {
+      ctx.pos = {
+        column: startCol,
+        line: startLine,
+        position: this.cursor,
+      }
+    }
 
     this.advance()
 
@@ -187,10 +211,34 @@ export class Tokenizer {
         break
       }
 
+      if (ctx) {
+        ctx.buf += c
+      }
+
       this.advance()
     }
 
     this.expect('}', { startCol, startLine })
+  }
+
+  private readCommentToken(): Token {
+    const ctx: ReadContext = {
+      buf: '',
+    }
+
+    this.readComment(ctx)
+
+    if (!ctx.pos) {
+      throw new Error(`No position from comment read`)
+    }
+
+    return {
+      column: ctx.pos.column,
+      line: ctx.pos.line,
+      position: ctx.pos.position,
+      type: Type.Comment,
+      value: ctx.buf,
+    }
   }
 
   private expect(
