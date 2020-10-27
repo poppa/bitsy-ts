@@ -52,10 +52,11 @@ function BlockEnd<T extends CodeBuffer>(this: T): void {
 export class CodeGenerator extends CodeBuffer implements EventTypeMap {
   protected ind = 1
   protected variables: Map<string, Variable> = new Map()
-  protected preamble: Map<string, string> = new Map()
+  protected preHeader: Map<string, string> = new Map()
 
   public render(): string {
     return (
+      `${this.preamble()}` +
       `(async function main() {\n` +
       `${this.header()}\n${super.render()}` +
       `})()`
@@ -68,6 +69,16 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
     if (typeof fn !== 'undefined') {
       fn(token)
     }
+  }
+
+  protected preamble(): string {
+    let pre = ''
+
+    this.preHeader.forEach((v) => {
+      pre += `  ${v}`
+    })
+
+    return pre
   }
 
   protected header(): string {
@@ -86,22 +97,30 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
   protected [EventType.ProgramEnd] = Noop
 
   protected [EventType.Read] = (): void => {
-    if (!this.preamble.has('readline')) {
-      this.preamble.set(
+    if (!this.preHeader.has('readline')) {
+      this.preHeader.set(
         'readline',
-        `const __readline__ = require('readline').createInterface({
-          input: process.stdin,
-          output: process.stdout
-        })
+        `const LOOP = require('readline')
+
+        const READ = () => {
+          const r = LOOP.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          })
+          return new Promise((resolve) => {
+            r.question('Write a numeric input: ', (a) => {
+              r.close()
+              resolve(parseInt(a, 10))
+            })
+          })
+        }
         `
       )
     }
-
-    // this.write(`() => {`, '=')
   }
 
   protected [EventType.ReadEnd] = (): void => {
-    this.write(` = readStdIn()`).nl()
+    this.write(` = await READ()`).nl()
   }
 
   protected [EventType.Else] = (): void => {

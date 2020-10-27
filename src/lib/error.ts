@@ -1,5 +1,4 @@
-import type { Token } from '../mod'
-import type { Type } from './token'
+import type { Token, Type } from './token'
 import { typeMap } from './token'
 
 export class SyntaxError extends Error {

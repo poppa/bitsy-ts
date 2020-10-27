@@ -1,2 +1,1 @@
-export { Tokenizer } from './lib/tokenizer'
-export { Token } from './lib/token'
+export { compileString, compileFile } from './lib/compiler'
