@@ -17,6 +17,7 @@ export const typeMap = [
   'LeftParen',
   'RightParen',
   'Keyword',
+  'Comment',
 ]
 
 export interface Token {
