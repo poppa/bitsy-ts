@@ -163,10 +163,6 @@ export class CodeGenerator extends CodeBuffer implements EventTypeMap {
 
   protected [EventType.Symbol] = (token: Token): void => {
     if (!this.variables.has(token.value)) {
-      // throw new Error(
-      //   `Undefined variable used in expression at line ` +
-      //     `${token.line} column ${token.column}`
-      // )
       this.variables.set(token.value, { token })
     } else {
       const v = this.variables.get(token.value)

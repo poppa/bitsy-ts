@@ -6,6 +6,7 @@ export const enum Type {
   LeftParen,
   RightParen,
   Keyword,
+  Comment,
 }
 
 export const typeMap = [
