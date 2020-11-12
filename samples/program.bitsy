@@ -1,2 +1,5 @@
+{ The most simple program }
+{ Another comment }
 BEGIN
+  k = 1
 END
